@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Mavlink Connection Information and Statistics
+
+A Qt GUI program that shows MAVLink Connection Information and Statistics.
+
+This is the main program. It contains a main window, widgets in the window
+and an app. The app processes messages.
+"""
+
+import sys, pdb
+
+from argparse import  ArgumentParser
+from uqtie            import UqtWin, UqtMav
+from PyQt5.QtWidgets  import QApplication, QVBoxLayout
+from PyQt5.QtCore     import QObject, pyqtSignal, QTimer
+from mavometer        import MessageStats
+from mavometer        import MessageTableView
+
+class MavoMainWindow(UqtWin.MainWindow):
+    """Main Window of UQtie-based app. It's just one big widget - MessageTableView"""
+    def __init__(self, parsedArgs, **kwargs ):
+        super(MavoMainWindow, self).__init__(parsedArgs, **kwargs)
+        self.setup_ui()
+        self.show()
+
+    def setup_ui(self):
+        vbox = QVBoxLayout(self.centralWidget())
+
+        dataList = [ ]
+
+        self.messageTableView = MessageTableView.MessageTableView ( dataList )
+        vbox.addWidget(self.messageTableView)
+
+class MavometerApp(QObject):
+    """Container Class for Top Level Objects. Dispatcher for App events and MAVLink messages"""
+
+    recvSignal = pyqtSignal(object, float)
+
+    def __init__(self, mainWindow, qtApp, parsedArgs):
+        super(self.__class__, self).__init__()
+        self.mainWindow = mainWindow
+        self.qtApp = qtApp
+        self.parsedArgs = parsedArgs
+        self.uqtMavConn = None
+        self.nRxMessages = 0
+        self.statsDict = {}
+        self.streamActive = False
+        self.updatingUi = False
+
+        # After the main loop is going, invoke the start method
+        QTimer.singleShot(0, self.start)
+
+        # Create a regular GUI-update callback. Could make this dependent
+        # on the connection actually having data
+        self.uiTimer = QTimer()
+        self.uiTimer.timeout.connect(self.update_ui)
+        self.uiTimer.start(500)
+
+    def start(self):
+        """Initialization that is postponed until after the main event loop is going"""
+        self.uqtMavConn = UqtMav.UqtMavConn(cmdLineArgs=self.parsedArgs)
+        self.recvSignal.connect(self.on_recv)
+        self.uqtMavConn.register_qt_recv_signal(self.recvSignal)
+
+    def process_message(self, msg, msgType, timestamp):
+        try:
+            messageStats = self.statsDict[msgType]
+        except:
+            messageStats = MessageStats.MessageStats(msgType)
+            self.statsDict[msgType] = messageStats
+
+        messageStats.consume(msg, timestamp)
+
+    def on_recv(self, msg, timestamp):
+        if not msg:
+            print ( f'MavometerApp.on_recv: finished after {self.nRxMessages}')
+            self.streamActive = False
+        else:
+            self.updatingUi = True
+            self.streamActive = True
+
+            msgType = msg.get_type()
+
+            self.process_message(msg, msgType, timestamp)
+            self.process_message(msg, "TOTAL", timestamp)
+
+            #print ( f'{vars(msg)}') #.get_type()}')
+            self.nRxMessages += 1
+
+    def update_one_stats_line(self, dataList, stats):
+        stats.update()
+
+        freq = stats.frequency
+        bw   = stats.bandwidth
+
+        dataList.append([stats.msgType, stats.nRxMsgs, round(freq,1), round(bw,1) ])
+        
+    def update_ui(self):
+        if not self.updatingUi:
+            return
+
+        dataList = []
+
+        stats = self.statsDict['TOTAL']
+
+        self.update_one_stats_line(dataList, stats)
+
+        for stats in list(self.statsDict.values()):
+            if stats.msgType != "TOTAL":
+                self.update_one_stats_line(dataList, stats)
+
+        self.mainWindow.messageTableView.update_model(dataList)
+
+        if not self.streamActive:
+            self.updatingUi = False
+
+def main():
+
+    mavArgParser = UqtMav.UqtMavConn.make_args()
+    
+    parser = ArgumentParser(parents=[mavArgParser])
+    parser.add_argument('-x', '--test', help='Test Argument placeholder', default='Test')
+    parsedArgs,unparsedArgs = parser.parse_known_args()
+
+    # Pass unparsed args to Qt, might have some X Windows args, like --display or Qt args, like -style
+    qtArgs = sys.argv[:1] + unparsedArgs
+    app = QApplication(qtArgs)
+
+    # Create the GUI
+    mainw = MavoMainWindow(parsedArgs, app=app, organizationName='Craton', appName='Mavometer', title='Mavometer')
+
+    # Create the application logic object
+    mavometer = MavometerApp(mainw, app, parsedArgs)
+
+    sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
