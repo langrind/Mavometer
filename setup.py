@@ -20,7 +20,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-          'pyqt5',
           'pymavlink',
           'uqtie>=0.1.1',
     ],

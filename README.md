@@ -24,12 +24,23 @@ and pymavlink.
 * [PyQt5](https://pypi.org/project/PyQt5/) - Mavometer is based on the Qt version 5 framework
 * [UQtie](https://pypi.org/project/uqtie/) - utility package for PyQt5 usage
 
-These can all be installed in the same way:
+
+The **Mavometer** distribution package does not name *PyQt5* as a dependency
+because you may have already installed it in some custom way, and
+you don't want the **Mavometer** installation process to create a redundant
+*PyQt5* installation.
+
+If you don't already have it, you can install **PyQt5** by doing this:
 
 ```bash
-pip install pymvalink
-pip install pyqt5
-pip install uqtie
+pip3 install pyqt5
+```
+
+**pymavlink** and **uqtie**  can be installed in the same way:
+
+```bash
+pip3 install pymvalink
+pip3 install uqtie
 ```
 
 Be aware that the appropriate installation procedure for a package can
@@ -40,7 +51,7 @@ vary depending on your OS and other factors.
 Install the package:
 
 ```bash
-pip install mavometer
+pip3 install mavometer
 ```
 
 Or clone from GitHub:
@@ -68,6 +79,8 @@ Or you have a log file produced by QGroundControl:
 ```
 $ mavometer --mavlink-port '/home/langrind/Documents/QGroundControl/Telemetry/2019-11-19 20-38-03.tlog'
 ```
+
+For (a little) more info, [RTFD](http://mavometer.rtfd.io/).
 
 ## Tests
 
