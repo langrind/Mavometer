@@ -22,7 +22,7 @@ setuptools.setup(
     install_requires=[
           'pyqt5',
           'pymavlink',
-          'uqtie',
+          'uqtie>=0.1.1',
     ],
     python_requires='>=3.6',
     scripts=['bin/mavometer'],

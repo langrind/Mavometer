@@ -124,7 +124,6 @@ def main():
     mavArgParser = UqtMav.UqtMavConn.make_args()
     
     parser = ArgumentParser(parents=[mavArgParser])
-    parser.add_argument('-x', '--test', help='Test Argument placeholder', default='Test')
     parsedArgs,unparsedArgs = parser.parse_known_args()
 
     # Pass unparsed args to Qt, might have some X Windows args, like --display or Qt args, like -style
